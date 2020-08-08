@@ -1,0 +1,67 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © stmd
+
+// @version=4
+
+//-------------------------------------
+
+// Release:                     2020-08-04
+// Author:                      stmd
+// Email:                       pine@stmd.nl
+// Profile:                     https://www.tradingview.com/u/stmd/
+
+//-------------------------------------
+// PURPOSE
+//
+
+//-------------------------------------
+// FEATURES
+//
+
+//-------------------------------------
+// NOTES
+//
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V1.0"
+vTitle                          = "Momentum"
+vShort                          = "MOM"
+vOverlay                        = false
+vScale                          = scale.right
+vPrecision                      = 0
+
+study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay, precision = vPrecision, resolution = "" )
+
+//-------------------------------------
+// INPUTS
+
+vMomSource                      = input( defval = close, type = input.source, title = "MOM - Source" )
+vMomLength                      = input( defval = 10, minval = 1, maxval = 256, title = "MOM - Length" )
+vMomSmooth                      = input( defval = 1, minval = 1, maxval = 256, title = "MOM - Smooth" )
+
+//-------------------------------------
+// FUNCTIONS
+
+fMa( n, s, l ) =>
+    r = float( 0 )
+    for i = 0 to ( l-1 )
+        r := ( r + s[ i ] )
+    a = r / l
+
+fMom( n, s, l ) =>
+    r = float( 0 )
+    r := ( s[ n ] - s[ n+l ] )
+
+//-------------------------------------
+// PLOT
+
+vMom                            = fMa( 0, fMom( 0, vMomSource, vMomLength ), vMomSmooth )
+vPlotMom                        = plot( vMom, style = plot.style_columns, color = color.black, title = "MOM" )
+
+//-------------------------------------
+
+vLineMedian                     = hline( 0, color = color.black, linestyle = hline.style_dashed, linewidth = 1, title = "Momentum - Median", editable = false )
+
+//-------------------------------------

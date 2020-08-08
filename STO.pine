@@ -1,0 +1,79 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © stmd
+
+// @version=4
+
+//-------------------------------------
+
+// Release:                     2020-08-04
+// Author:                      stmd
+// Email:                       pine@stmd.nl
+// Profile:                     https://www.tradingview.com/u/stmd/
+
+//-------------------------------------
+// PURPOSE
+//
+
+//-------------------------------------
+// FEATURES
+//
+
+//-------------------------------------
+// NOTES
+//
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V1.0"
+vTitle                          = "Stochastic"
+vShort                          = "STO"
+vOverlay                        = false
+vScale                          = scale.right
+vPrecision                      = 3
+
+study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay, precision = vPrecision, resolution = "" )
+
+//-------------------------------------
+// INPUTS
+
+vStoSource                      = input( defval = close, type = input.source, title = "STO - Source" )
+vStoKLength                     = input( defval = 14, minval = 1, maxval = 256, title = "STO %K - Length" )
+vStoDLength                     = input( defval = 3, minval = 1, maxval = 256, title = "STO %D - Length" )
+vStoKSmooth                     = input( defval = 3, minval = 1, maxval = 256, title = "STO %K - Smooth" )
+vStoDSmooth                     = input( defval = 3, minval = 1, maxval = 256, title = "STO %D - Smooth" )
+
+//-------------------------------------
+// FUNCTIONS
+
+fMa( n, s, l ) =>
+    r = float( 0 )
+    for i = 0 to ( l-1 )
+        r := ( r + s[ i ] )
+    a = r / l
+
+fStoK( n, s, kl, dl ) =>
+    r = float( 0 )
+    r := ( ( s[ n ] - lowest( low[ n ], kl ) ) / ( highest( high[ n ], kl ) - lowest( low[ n ], kl ) ) * 100 )
+
+fStoD( n, s, kl, dl ) =>
+    r = float( 0 )
+    r := ( fMa( n, ( s[ n ] - lowest( low[ n ], kl ) ) / ( highest( high[ n ], kl ) - lowest( low[ n ], kl ) ), dl ) * 100 )
+
+//-------------------------------------
+// PLOT
+
+vStoK                           = fMa( 0, fStoK( 0, vStoSource, vStoKLength, vStoDLength ), vStoKSmooth )
+vStoD                           = fMa( 0, fStoD( 0, vStoSource, vStoKLength, vStoDLength ), vStoDSmooth )
+
+vPlotStoK                       = plot( vStoK, style = plot.style_line, color = color.black, title = "STO %K" )
+vPlotStoD                       = plot( vStoD, style = plot.style_line, color = color.black, title = "STO %D" )
+
+//-------------------------------------
+// BANDS
+
+vUpperBand                      = hline( 80, color = color.black, title = "STO - Upper Band" )
+vLowerBand                      = hline( 20, color = color.black, title = "STO - Lower Band" )
+fill( vUpperBand, vLowerBand, color = color.black, transp = 90, title = "STO - Background" )
+
+//-------------------------------------

@@ -1,0 +1,86 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © stmd
+
+// @version=4
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Author:                      stmd
+// Email:                       pine@stmd.nl
+// Profile:                     https://www.tradingview.com/u/stmd/
+
+//-------------------------------------
+// PURPOSE
+//
+
+//-------------------------------------
+// FEATURES
+//
+
+//-------------------------------------
+// NOTES
+//
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V1.0"
+vTitle                          = "SuperTrend"
+vShort                          = "STR"
+vOverlay                        = true
+vScale                          = scale.right
+vPrecision                      = 0
+
+study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay, precision = vPrecision, resolution = "" )
+
+//-------------------------------------
+// INPUTS
+
+vStrSource                      = input( defval = close, type = input.source, title = "STR - Source" )
+vStrMultiplier                  = input( defval = 1, minval = 1, maxval = 256, title = "STR - Multiplier", type = input.float, step = 0.1 )
+vStrLength                      = input( defval = 4, minval = 1, maxval = 256, title = "STR - Length" )
+
+//-------------------------------------
+// FUNCTIONS
+
+fTrendLevelAbove( n, s, l, m ) =>
+    r = ( hl2[ n ] - ( m * atr( l ) ) )
+    r := ( s[ n+1 ] > nz( r[ n+1 ], r[ n ] ) ) ? ( max( r[ n ], nz( r[ n+1 ], r[ n ] ) ) ) : r[ n ]
+    r
+
+fTrendLevelBelow( n, s, l, m ) =>
+    r = ( hl2[ n ] + ( m * atr( l ) ) )
+    r := ( s[ n+1 ] < nz( r[ n+1 ], r[ n ] ) ) ? ( min( r[ n ], nz( r[ n+1 ], r[ n ] ) ) ) : r[ n ]
+    r
+
+fAboveOrBelow( n, s, a, b ) =>
+    r = 0
+    r := ( nz( r[ n+1 ], r[ n ] ) )
+    r := ( s[ n ] > b[ n ] ) ? 1 : ( s[ n ] < a[ n ] ) ? 0 : r[n]
+    r
+
+//-------------------------------------
+// CALCULATE
+
+vLevelAbove                     = fTrendLevelAbove( 0, close, vStrLength, vStrMultiplier )
+vLevelBelow                     = fTrendLevelBelow( 0, close, vStrLength, vStrMultiplier )
+vAboveOrBelow                   = fAboveOrBelow( 0, vStrSource, vLevelAbove, vLevelBelow )
+
+//-------------------------------------
+// PLOT
+
+vStrAbove                       = vAboveOrBelow ? vLevelAbove : na
+vPlotStrAbove                   = plot( vStrAbove, style = plot.style_linebr, linewidth = 1, color = color.black, title = "STR - Above" )
+
+vStrBelow                       = not vAboveOrBelow ? vLevelBelow : na
+vPlotStrBelow                   = plot( vStrBelow, style = plot.style_linebr, linewidth = 1, color = color.black, title = "STR - Below" )
+
+//-------------------------------------
+// FILL
+
+vLevelMedian                    = plot( ohlc4, style = plot.style_line, linewidth = 0, color = color.new( color.black, 100 ), title = "STR - Median" )
+fill( vLevelMedian, vPlotStrAbove, color = color.black, title = "STR - Above" )
+fill( vLevelMedian, vPlotStrBelow, color = color.black, title = "STR - Below" )
+
+//-------------------------------------

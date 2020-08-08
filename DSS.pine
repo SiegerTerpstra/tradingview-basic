@@ -1,0 +1,68 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © stmd
+
+// @version=4
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Author:                      stmd
+// Email:                       pine@stmd.nl
+// Profile:                     https://www.tradingview.com/u/stmd/
+
+//-------------------------------------
+// PURPOSE
+//
+
+//-------------------------------------
+// FEATURES
+//
+
+//-------------------------------------
+// NOTES
+//
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V1.0"
+vTitle                          = "Double Smoothed Stochastic"
+vShort                          = "DSS"
+vOverlay                        = false
+vScale                          = scale.right
+vPrecision                      = 0
+
+study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay, precision = vPrecision, resolution="" )
+
+//-------------------------------------
+// INPUTS
+
+vDssSource                      = input( defval = close, type = input.source, title = "DSS - Source" )
+vDssLengthFast                  = input( defval = 3, minval = 1, maxval = 256, title = "DSS - Fast Length" )
+vDssLengthSlow                  = input( defval = 9, minval = 1, maxval = 256, title = "DSS - Slow Length" )
+vDssSmooth                      = input( defval = 1, minval = 1, maxval = 256, title = "DSS - Smooth" )
+
+//-------------------------------------
+// FUNCTIONS
+
+fMa( n, s, l ) =>
+    r = float( 0 )
+    for i = 0 to ( l-1 )
+        r := ( r + s[ i ] )
+    a = r / l
+
+fDss( n, s, ls, lf ) =>
+    ratio = ( ema( s[ n ], lf ) / ema( s[ n ], ls ) )
+	diffr = ( highest( ratio, ls ) - lowest( ratio, ls ) )
+	average = ( ema( ( ( ratio - lowest( ratio , ls ) ) / diffr ), lf ) * 100 )
+	diffa = ( highest( average, ls ) - lowest( average, ls ) )
+	dss = ( ema( ( ( average - lowest( average, ls ) ) / diffa ), lf ) * 100 )
+    r = dss
+
+//-------------------------------------
+// PLOT
+
+vDss                            = fMa( 0, fDss( 0, close, vDssLengthSlow, vDssLengthFast ), vDssSmooth )
+vPlotDss                        = plot( vDss, style = plot.style_line, color = color.black, title = "DSS" )
+
+//-------------------------------------
