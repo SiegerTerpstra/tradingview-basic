@@ -56,7 +56,7 @@ fEma( n, s, l ) =>
 //-------------------------------------
 // PLOT
 
-vEma                            = fEma( 0, close, vEmaLength )
+vEma                            = fEma( 0, vEmaSource, vEmaLength )
 vPlotEma                        = plot( vEma, style = plot.style_line, color = color.black, title = "EMA" )
 
 //-------------------------------------
