@@ -25,7 +25,7 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V1.0"
+vVersion                        = "V1.1"
 vTitle                          = "Momentum"
 vShort                          = "MOM"
 vOverlay                        = false
@@ -37,9 +37,9 @@ study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay
 //-------------------------------------
 // INPUTS
 
-vMomSource                      = input( defval = close, type = input.source, title = "MOM - Source" )
-vMomLength                      = input( defval = 10, minval = 1, maxval = 256, title = "MOM - Length" )
-vMomSmooth                      = input( defval = 1, minval = 1, maxval = 256, title = "MOM - Smooth" )
+vMomSource                      = input( defval = close, type = input.source, title = "Source" )
+vMomLength                      = input( defval = 10, minval = 1, maxval = 256, title = "Length" )
+vMomSmooth                      = input( defval = 1, minval = 1, maxval = 256, title = "Smooth" )
 
 //-------------------------------------
 // FUNCTIONS
@@ -55,13 +55,18 @@ fMom( n, s, l ) =>
     r := ( s[ n ] - s[ n+l ] )
 
 //-------------------------------------
-// PLOT
+// COLORS
 
-vMom                            = fMa( 0, fMom( 0, vMomSource, vMomLength ), vMomSmooth )
-vPlotMom                        = plot( vMom, style = plot.style_columns, color = color.black, title = "MOM" )
+fColorMom( n, s ) =>
+    r = ( s >= 0 ) ? ( s[1] < s[0] ) ? #666667 : #666666 : ( s[1] > s[0] ) ? #666665 : #666664
+    r
 
 //-------------------------------------
+// PLOT
 
-vLineMedian                     = hline( 0, color = color.black, linestyle = hline.style_dashed, linewidth = 1, title = "Momentum - Median", editable = false )
+vLineMedian                     = hline( 0, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Median", editable = true )
+
+vMom                            = fMa( 0, fMom( 0, vMomSource, vMomLength ), vMomSmooth )
+vPlotMom                        = plot( vMom, style = plot.style_histogram, linewidth = 4, color = fColorMom( 0, vMom ), title = "Momentum" )
 
 //-------------------------------------

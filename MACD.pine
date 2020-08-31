@@ -25,7 +25,7 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V1.0"
+vVersion                        = "V1.1"
 vTitle                          = "Moving Average Convergence Divergence"
 vShort                          = "MACD"
 vOverlay                        = false
@@ -42,6 +42,7 @@ vMacdFastLength                 = input( defval = 12, minval = 1, maxval = 256, 
 vMacdSlowLength                 = input( defval = 26, minval = 1, maxval = 256, title = "MACD - Slow Length" )
 vMacdSignalLength               = input( defval = 9, minval = 1, maxval = 256, title = "MACD - Signal Length" )
 vMacdSmooth                     = input( defval = 1, minval = 1, maxval = 256, title = "MACD - Smooth" )
+
 //-------------------------------------
 // FUNCTIONS
 
@@ -66,15 +67,32 @@ fHistogram( macd, signal ) =>
     r = histogram
 
 //-------------------------------------
+// COLORS
+
+fColorMacd( n, s ) =>
+    r = ( s[1] > s[0] ) ? #000000 : #000001
+    r
+
+fColorSignal( n, s ) =>
+    r = ( s[1] > s[0] ) ? #000000 : #000001
+    r
+
+fColorHistogram( n, s ) =>
+    r = ( s >= 0 ) ? ( s[1] < s[0] ) ? #666666 : #CCCCCC : ( s[1] > s[0] ) ? #CCCCCB : #666665
+    r
+
+//-------------------------------------
 // PLOT
 
-vMacd                            = fMa( 0, fMacd( 0, close, vMacdFastLength, vMacdSlowLength, vMacdSignalLength ), vMacdSmooth )
-vPlotMacd                        = plot( vMacd, style = plot.style_line, color = color.black, title = "MACD" )
+vLineMedian                     = hline( 0, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Median", editable = true )
+
+vMacd                            = fMa( 0, fMacd( 0, vMacdSource, vMacdFastLength, vMacdSlowLength, vMacdSignalLength ), vMacdSmooth )
+vPlotMacd                        = plot( vMacd, style = plot.style_line, color = fColorMacd( 0, vMacd ), title = "MacD" )
 
 vSignal                          = fMa( 0, fSignal( vMacd, vMacdSignalLength ), vMacdSmooth )
-vPlotSignal                      = plot( vSignal, style = plot.style_line, color = color.black, title = "MACD - Signal" )
+vPlotSignal                      = plot( vSignal, style = plot.style_line, color = fColorSignal( 0, vSignal ), title = "Signal" )
 
 vHistogram                       = fHistogram( vMacd, vSignal )
-vPlotHistogram                   = plot( vHistogram, style = plot.style_columns, color = color.black, title = "MACD - Histogram" )
+vPlotHistogram                   = plot( vHistogram, style = plot.style_columns, color = fColorHistogram( 0, vHistogram ), title = "Histogram" )
 
 //-------------------------------------
