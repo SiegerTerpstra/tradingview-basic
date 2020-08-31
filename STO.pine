@@ -25,7 +25,7 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V1.0"
+vVersion                        = "V1.1"
 vTitle                          = "Stochastic"
 vShort                          = "STO"
 vOverlay                        = false
@@ -63,17 +63,14 @@ fStoD( n, s, kl, dl ) =>
 //-------------------------------------
 // PLOT
 
+vUpperBand                      = hline( 80, color = color.black, title = "STO - Upper Band" )
+vLowerBand                      = hline( 20, color = color.black, title = "STO - Lower Band" )
+//fill( vUpperBand, vLowerBand, color = color.black, transp = 90, title = "STO - Background" )
+
 vStoK                           = fMa( 0, fStoK( 0, vStoSource, vStoKLength, vStoDLength ), vStoKSmooth )
 vStoD                           = fMa( 0, fStoD( 0, vStoSource, vStoKLength, vStoDLength ), vStoDSmooth )
 
 vPlotStoK                       = plot( vStoK, style = plot.style_line, color = color.black, title = "STO %K" )
 vPlotStoD                       = plot( vStoD, style = plot.style_line, color = color.black, title = "STO %D" )
-
-//-------------------------------------
-// BANDS
-
-vUpperBand                      = hline( 80, color = color.black, title = "STO - Upper Band" )
-vLowerBand                      = hline( 20, color = color.black, title = "STO - Lower Band" )
-fill( vUpperBand, vLowerBand, color = color.black, transp = 90, title = "STO - Background" )
 
 //-------------------------------------

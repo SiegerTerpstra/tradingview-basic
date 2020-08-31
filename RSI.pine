@@ -25,7 +25,7 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V1.0"
+vVersion                        = "V1.1"
 vTitle                          = "Relative Strength Index"
 vShort                          = "RSI"
 vOverlay                        = false
@@ -63,16 +63,20 @@ fRsi( n, l, s ) =>
     r := ( 100 - ( 100 / ( 1 + ( fRma( n, fMaxUpDown( n, s, 'up' ), l ) / fRma( n, fMaxUpDown( n, s, 'down' ), l ) ) ) ) )
 
 //-------------------------------------
-// PLOT
+// COLORS
 
-vRsi                            = fMa( 0, fRsi( 0, vRsiLength, vRsiSource ), vRsiSmooth )
-vPlotRsi                        = plot( vRsi, style = plot.style_line, color = color.black, title = "RSI" )
+fColorRsi( n, s ) =>
+    r = ( s[1] < s[0] ) ? #666666 : #666665
+    r
 
 //-------------------------------------
-// BANDS
+// PLOT
 
-vUpperBand                      = hline( 70, color = color.black, title = "RSI - Upper Band" )
-vLowerBand                      = hline( 30, color = color.black, title = "RSI - Lower Band" )
-fill( vUpperBand, vLowerBand, color = color.black, transp = 90, title = "RSI - Background" )
+vUpperBand                      = hline( 70, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
+vLowerBand                      = hline( 30, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
+//fill( vUpperBand, vLowerBand, color = #666666, transp = 70, title = "Background" )
+
+vRsi                            = fMa( 0, fRsi( 0, vRsiLength, vRsiSource ), vRsiSmooth )
+vPlotRsi                        = plot( vRsi, style = plot.style_line, color = fColorRsi( 0, vRsi ), title = "RSI" )
 
 //-------------------------------------

@@ -25,7 +25,7 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V1.0"
+vVersion                        = "V1.1"
 vTitle                          = "Double Smoothed Stochastic"
 vShort                          = "DSS"
 vOverlay                        = false
@@ -61,6 +61,9 @@ fDss( n, s, ls, lf ) =>
 
 //-------------------------------------
 // PLOT
+
+vUpperBand                      = hline( 80, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
+vLowerBand                      = hline( 20, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
 
 vDss                            = fMa( 0, fDss( 0, close, vDssLengthSlow, vDssLengthFast ), vDssSmooth )
 vPlotDss                        = plot( vDss, style = plot.style_line, color = color.black, title = "DSS" )
