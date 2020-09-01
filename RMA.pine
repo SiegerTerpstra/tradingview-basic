@@ -37,25 +37,36 @@ study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay
 //-------------------------------------
 // INPUTS
 
-vRmaSource                      = input( defval = close, type = input.source, title = "RMA - Source" )
-vRmaLength                      = input( defval = 9, minval = 1, maxval = 256, title = "RMA - Length" )
+vRmaSource                      = input( defval = close, type = input.source, title = "Source" )
+vRmaLength                      = input( defval = 9, minval = 1, maxval = 1024, title = "Length" )
+vSmooth                         = input( defval = 1, minval = 1, maxval = 1024, title = "Smooth" )
+vOffSet                         = input( defval = 0, minval = 0, maxval = 1024, title = "Offset" )
 
 //-------------------------------------
 // FUNCTIONS
 
-fMa( n, s, l ) =>
+fMa( n, s, le ) =>
     r = float( 0 )
-    for i = 0 to ( l-1 )
+    for i = n + 0 to ( n + ( le - 1 ) )
         r := ( r + s[ i ] )
-    a = r / l
+    a = r / le
 
-fRma( n, s, l ) =>
+fRma( n, s, le ) =>
+    ma = fMa( n, s, le )
     r = float( 0 )
-    r := ( na( r[ n+1 ] ) ? fMa( n, s, l ) : ( ( r[ n+1 ] * ( l-1 ) ) + s[ n ] ) / l )
+    r := ( na( r[ 1 ] ) ? ma : ( ( r[ 1 ] * ( le - 1 ) ) + s[ n ] ) / le )
+
+//-------------------------------------
+// COLORS
+
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? #26A69A : #EF5350
+    r
 
 //-------------------------------------
 // PLOT
 
-vPlotRma                        = plot( fRma( 0, vRmaSource, vRmaLength ), style = plot.style_line, color = color.black, title = "RMA" )
+vRma                            = fMa( 0, fRma( vOffSet, vRmaSource, vRmaLength ), vSmooth )
+vPlotRma                        = plot( vRma, style = plot.style_line, color = fColor( 0, vRma ), title = "RMA" )
 
 //-------------------------------------

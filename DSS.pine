@@ -37,35 +37,48 @@ study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay
 //-------------------------------------
 // INPUTS
 
-vDssSource                      = input( defval = close, type = input.source, title = "DSS - Source" )
-vDssLengthFast                  = input( defval = 3, minval = 1, maxval = 256, title = "DSS - Fast Length" )
-vDssLengthSlow                  = input( defval = 9, minval = 1, maxval = 256, title = "DSS - Slow Length" )
-vDssSmooth                      = input( defval = 1, minval = 1, maxval = 256, title = "DSS - Smooth" )
+vSource                         = input( defval = close, type = input.source, title = "Source" )
+vLengthFast                     = input( defval = 3, minval = 1, maxval = 1024, title = "Fast Length" )
+vLengthSlow                     = input( defval = 9, minval = 1, maxval = 1024, title = "Slow Length" )
+vSmooth                         = input( defval = 1, minval = 1, maxval = 1024, title = "Smooth" )
+vOffSet                         = input( defval = 0, minval = 0, maxval = 1024, title = "Offset" )
 
 //-------------------------------------
 // FUNCTIONS
 
-fMa( n, s, l ) =>
+fMa( n, s, le ) =>
     r = float( 0 )
-    for i = 0 to ( l-1 )
+    for i = n + 0 to ( n + ( le - 1 ) )
         r := ( r + s[ i ] )
-    a = r / l
+    a = r / le
+
+fEma( n, s, le ) =>
+    ma = fMa( n, s, le )
+    r = float( 0 )
+    r := ( na( r[ 1 ] ) ? ma : ( r[ 1 ] + ( 2 / ( le + 1 ) ) * ( s[ n ] - r[ 1 ] ) ) )
 
 fDss( n, s, ls, lf ) =>
-    ratio = ( ema( s[ n ], lf ) / ema( s[ n ], ls ) )
+    ratio = ( fEma( 0, s[ n ], lf ) / fEma( 0, s[ n ], ls ) )
 	diffr = ( highest( ratio, ls ) - lowest( ratio, ls ) )
-	average = ( ema( ( ( ratio - lowest( ratio , ls ) ) / diffr ), lf ) * 100 )
+	average = ( fEma( 0, ( ( ratio - lowest( ratio , ls ) ) / diffr ), lf ) * 100 )
 	diffa = ( highest( average, ls ) - lowest( average, ls ) )
-	dss = ( ema( ( ( average - lowest( average, ls ) ) / diffa ), lf ) * 100 )
+	dss = ( fEma( 0, ( ( average - lowest( average, ls ) ) / diffa ), lf ) * 100 )
     r = dss
+
+//-------------------------------------
+// COLORS
+
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? #26A69A : #EF5350
+    r
 
 //-------------------------------------
 // PLOT
 
-vUpperBand                      = hline( 80, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
-vLowerBand                      = hline( 20, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
+vUpperBand                      = hline( 90, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
+vLowerBand                      = hline( 10, color = #666666, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
 
-vDss                            = fMa( 0, fDss( 0, close, vDssLengthSlow, vDssLengthFast ), vDssSmooth )
-vPlotDss                        = plot( vDss, style = plot.style_line, color = color.black, title = "DSS" )
+vDss                            = fMa( 0, fDss( vOffSet, vSource, vLengthSlow, vLengthFast ), vSmooth )
+vPlotDss                        = plot( vDss, style = plot.style_line, color = fColor( 0, vDss ), title = "DSS" )
 
 //-------------------------------------

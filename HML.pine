@@ -32,12 +32,12 @@ vOverlay                        = false
 vScale                          = scale.right
 vPrecision                      = 0
 
-study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort+" ["+vVersion+"]", overlay = vOverlay, precision = vPrecision, resolution = "" )
+study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay, precision = vPrecision, resolution = "" )
 
 //-------------------------------------
 // INPUTS
 
-vHmlSmooth                      = input( defval = 9, minval = 1, maxval = 256, title = "HML - Smooth" )
+vLength                         = input( defval = 9, minval = 1, maxval = 1024, title = "Length" )
 
 //-------------------------------------
 // FUNCTIONS
@@ -53,12 +53,19 @@ fHml( n ) =>
     r
 
 //-------------------------------------
+// COLORS
+
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? #0000b3 : #6666ff
+    r
+
+//-------------------------------------
 // PLOT
 
-vHighLowLine                    = fMa( 0, fHml( 0 ), vHmlSmooth )
-vPlotRsi                        = plot( vHighLowLine, style = plot.style_line, color = color.black, title = "HML - Line" )
-
 vHighLowHistogram               = fHml( 0 )
-vPlotHighLow                    = plot( vHighLowHistogram, style = plot.style_columns, color = color.black, title = "HML - Histogram" )
+vPlotHighLow                    = plot( vHighLowHistogram, style = plot.style_columns, color = fColor( 0, vHighLowHistogram ), title = "HML - Histogram" )
+
+vHighLowLine                    = fMa( 0, fHml( 0 ), vLength )
+vPlotRsi                        = plot( vHighLowLine, style = plot.style_line, color = #b30086, title = "HML - Line" )
 
 //-------------------------------------
