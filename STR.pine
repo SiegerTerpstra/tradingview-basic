@@ -25,7 +25,7 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V1.0"
+vVersion                        = "V1.1"
 vTitle                          = "SuperTrend"
 vShort                          = "STR"
 vOverlay                        = true
@@ -37,50 +37,51 @@ study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay
 //-------------------------------------
 // INPUTS
 
-vStrSource                      = input( defval = close, type = input.source, title = "STR - Source" )
-vStrMultiplier                  = input( defval = 1, minval = 1, maxval = 256, title = "STR - Multiplier", type = input.float, step = 0.1 )
-vStrLength                      = input( defval = 4, minval = 1, maxval = 256, title = "STR - Length" )
+vSource                         = input( defval = close, type = input.source, title = "Source" )
+vPositiveMultiplier             = input( defval = 1, minval = 1, maxval = 1024, title = "Positive Multiplier", type = input.float, step = 0.1 )
+vNegativeMultiplier             = input( defval = 1, minval = 1, maxval = 1024, title = "Negative Multiplier", type = input.float, step = 0.1 )
+vLength                         = input( defval = 4, minval = 1, maxval = 1024, title = "Length" )
 
 //-------------------------------------
 // FUNCTIONS
 
 fTrendLevelAbove( n, s, l, m ) =>
     r = ( hl2[ n ] - ( m * atr( l ) ) )
-    r := ( s[ n+1 ] > nz( r[ n+1 ], r[ n ] ) ) ? ( max( r[ n ], nz( r[ n+1 ], r[ n ] ) ) ) : r[ n ]
+    r := ( s[ n + 1 ] > nz( r[ n + 1 ], r[ n ] ) ) ? ( max( r[ n ], nz( r[ n + 1 ], r[ n ] ) ) ) : r[ n ]
     r
 
 fTrendLevelBelow( n, s, l, m ) =>
     r = ( hl2[ n ] + ( m * atr( l ) ) )
-    r := ( s[ n+1 ] < nz( r[ n+1 ], r[ n ] ) ) ? ( min( r[ n ], nz( r[ n+1 ], r[ n ] ) ) ) : r[ n ]
+    r := ( s[ n + 1 ] < nz( r[ n + 1 ], r[ n ] ) ) ? ( min( r[ n ], nz( r[ n + 1 ], r[ n ] ) ) ) : r[ n ]
     r
 
 fAboveOrBelow( n, s, a, b ) =>
     r = 0
-    r := ( nz( r[ n+1 ], r[ n ] ) )
-    r := ( s[ n ] > b[ n ] ) ? 1 : ( s[ n ] < a[ n ] ) ? 0 : r[n]
+    r := ( nz( r[ n + 1 ], r[ n ] ) )
+    r := ( s[ n ] > b[ n ] ) ? 1 : ( s[ n ] < a[ n ] ) ? 0 : r[ n ]
     r
 
 //-------------------------------------
 // CALCULATE
 
-vLevelAbove                     = fTrendLevelAbove( 0, close, vStrLength, vStrMultiplier )
-vLevelBelow                     = fTrendLevelBelow( 0, close, vStrLength, vStrMultiplier )
-vAboveOrBelow                   = fAboveOrBelow( 0, vStrSource, vLevelAbove, vLevelBelow )
+vLevelAbove                     = fTrendLevelAbove( 0, close, vLength, vPositiveMultiplier )
+vLevelBelow                     = fTrendLevelBelow( 0, close, vLength, vNegativeMultiplier )
+vAboveOrBelow                   = fAboveOrBelow( 0, vSource, vLevelAbove, vLevelBelow )
 
 //-------------------------------------
 // PLOT
 
 vStrAbove                       = vAboveOrBelow ? vLevelAbove : na
-vPlotStrAbove                   = plot( vStrAbove, style = plot.style_linebr, linewidth = 1, color = color.black, title = "STR - Above" )
+vPlotStrAbove                   = plot( vStrAbove, style = plot.style_linebr, linewidth = 1, color = #26A69A, title = "Above" )
 
 vStrBelow                       = not vAboveOrBelow ? vLevelBelow : na
-vPlotStrBelow                   = plot( vStrBelow, style = plot.style_linebr, linewidth = 1, color = color.black, title = "STR - Below" )
+vPlotStrBelow                   = plot( vStrBelow, style = plot.style_linebr, linewidth = 1, color = #EF5350, title = "Below" )
 
 //-------------------------------------
 // FILL
 
-vLevelMedian                    = plot( ohlc4, style = plot.style_line, linewidth = 0, color = color.new( color.black, 100 ), title = "STR - Median" )
-fill( vLevelMedian, vPlotStrAbove, color = color.black, title = "STR - Above" )
-fill( vLevelMedian, vPlotStrBelow, color = color.black, title = "STR - Below" )
+vLevelMedian                    = plot( ohlc4, style = plot.style_line, linewidth = 0, color = color.new( color.white, 100 ), title = "Median", editable = false )
+fill( vLevelMedian, vPlotStrAbove, color = color.new( #26A69A, 80 ), title = "Background Above" )
+fill( vLevelMedian, vPlotStrBelow, color = color.new( #EF5350, 80 ), title = "Background Below" )
 
 //-------------------------------------

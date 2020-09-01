@@ -30,27 +30,28 @@ vTitle                          = "Stochastic"
 vShort                          = "STO"
 vOverlay                        = false
 vScale                          = scale.right
-vPrecision                      = 3
+vPrecision                      = 0
 
 study( title = vTitle+" ["+vVersion+"]", shorttitle = vShort, overlay = vOverlay, precision = vPrecision, resolution = "" )
 
 //-------------------------------------
 // INPUTS
 
-vStoSource                      = input( defval = close, type = input.source, title = "STO - Source" )
-vStoKLength                     = input( defval = 14, minval = 1, maxval = 256, title = "STO %K - Length" )
-vStoDLength                     = input( defval = 3, minval = 1, maxval = 256, title = "STO %D - Length" )
-vStoKSmooth                     = input( defval = 3, minval = 1, maxval = 256, title = "STO %K - Smooth" )
-vStoDSmooth                     = input( defval = 3, minval = 1, maxval = 256, title = "STO %D - Smooth" )
+vSource                         = input( defval = close, type = input.source, title = "Source" )
+vKLength                        = input( defval = 14, minval = 1, maxval = 1024, title = "%K - Length" )
+vDLength                        = input( defval = 3, minval = 1, maxval = 1024, title = "%D - Length" )
+vKSmooth                        = input( defval = 3, minval = 1, maxval = 1024, title = "%K - Smooth" )
+vDSmooth                        = input( defval = 3, minval = 1, maxval = 1024, title = "%D - Smooth" )
+vOffSet                         = input( defval = 0, minval = 0, maxval = 1024, title = "Offset" )
 
 //-------------------------------------
 // FUNCTIONS
 
-fMa( n, s, l ) =>
+fMa( n, s, le ) =>
     r = float( 0 )
-    for i = 0 to ( l-1 )
+    for i = n + 0 to ( n + ( le - 1 ) )
         r := ( r + s[ i ] )
-    a = r / l
+    a = r / le
 
 fStoK( n, s, kl, dl ) =>
     r = float( 0 )
@@ -58,19 +59,29 @@ fStoK( n, s, kl, dl ) =>
 
 fStoD( n, s, kl, dl ) =>
     r = float( 0 )
-    r := ( fMa( n, ( s[ n ] - lowest( low[ n ], kl ) ) / ( highest( high[ n ], kl ) - lowest( low[ n ], kl ) ), dl ) * 100 )
+    r := ( fMa( 0, ( s[ n ] - lowest( low[ n ], kl ) ) / ( highest( high[ n ], kl ) - lowest( low[ n ], kl ) ), dl ) * 100 )
+
+//-------------------------------------
+// COLORS
+
+fColorK( n, k, d ) =>
+    r = ( k[ n ] > d[ n ] ) ? #26A69A : #EF5350
+    r
+
+fColorD( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ?  #999999 :  #999999
+    r
 
 //-------------------------------------
 // PLOT
 
 vUpperBand                      = hline( 80, color = color.black, title = "STO - Upper Band" )
 vLowerBand                      = hline( 20, color = color.black, title = "STO - Lower Band" )
-//fill( vUpperBand, vLowerBand, color = color.black, transp = 90, title = "STO - Background" )
 
-vStoK                           = fMa( 0, fStoK( 0, vStoSource, vStoKLength, vStoDLength ), vStoKSmooth )
-vStoD                           = fMa( 0, fStoD( 0, vStoSource, vStoKLength, vStoDLength ), vStoDSmooth )
+vStoK                           = fMa( 0, fStoK( vOffSet, vSource, vKLength, vDLength ), vKSmooth )
+vStoD                           = fMa( 0, fStoD( vOffSet, vSource, vKLength, vDLength ), vDSmooth )
 
-vPlotStoK                       = plot( vStoK, style = plot.style_line, color = color.black, title = "STO %K" )
-vPlotStoD                       = plot( vStoD, style = plot.style_line, color = color.black, title = "STO %D" )
+vPlotStoK                       = plot( vStoK, style = plot.style_line, color = fColorK( 0, vStoK, vStoD ), title = "STO %K" )
+vPlotStoD                       = plot( vStoD, style = plot.style_line, color = fColorD( 0, vStoD ), title = "STO %D" )
 
 //-------------------------------------
