@@ -1,0 +1,149 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - RSI (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Relative Strength Index (RSI) - a momentum oscillator measuring the speed
+// and magnitude of price changes. Developed by J. Welles Wilder Jr. in 1978.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - Classic RSI calculation using RMA (Wilder's smoothing)
+// - Optional smoothing via additional MA pass
+// - Offset parameter for historical analysis
+// - Dynamic color based on rising/falling values
+// - Overbought/Oversold bands at 70/30
+
+//-------------------------------------
+// NOTES
+// - Values oscillate between 0 and 100
+// - Above 70 = overbought (potential sell signal)
+// - Below 30 = oversold (potential buy signal)
+// - RSI = 100 - (100 / (1 + RS))
+// - RS = Average Gain / Average Loss (using RMA)
+// - Divergence between price and RSI signals reversals
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "pine6"
+vTitle                          = "Relative Strength Index"
+vShort                          = "RSI"
+vOverlay                        = false
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupRsi                    = "RSI (Standard: close, 14, 1)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = hl2, title = "Source", group = groupRsi )
+vLength                         = input.int( defval = 15, minval = 1, maxval = 1024, title = "Length", group = groupRsi )
+vSmooth                         = input.int( defval = 6, minval = 1, maxval = 1024, title = "Smooth", group = groupRsi )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupRsi )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+cUpperBand                      = #C0C0C0
+cLowerBand                      = #C0C0C0
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Calculate upward or downward price movement
+// @param       n (int) Offset for lookback
+// @param       s (series float) Source data
+// @param       t (string) Type: 'up' for gains, 'down' for losses
+// @returns     (float) Positive movement value or zero
+fMaxUpDown( n, s, t ) =>
+    r = ( t == 'up' ) ? math.max( s[ n ] - s[ n + 1 ], 0 ) : math.max( s[ n + 1 ] - s[ n ], 0 )
+    r
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Rolling Moving Average (Wilder's Smoothing)
+// @param       n (int) Offset for source indexing
+// @param       s (series float) Source data
+// @param       le (int) Length for RMA calculation
+// @returns     (float) RMA value with persistent state
+fRma( n, s, le ) =>
+    ma = fMa( n, s, le )
+    var float r = na
+    r := na( r[ 1 ] ) ? ma : ( ( r[ 1 ] * ( le - 1 ) ) + s[ n ] ) / le
+    r
+
+// @function    Relative Strength Index calculation
+// @param       n (int) Offset for source indexing
+// @param       le (int) Length for RSI calculation
+// @param       s (series float) Source data
+// @returns     (float) RSI value between 0 and 100
+fRsi( n, le, s ) =>
+    up   = fMaxUpDown( n, s, 'up' )
+    down = fMaxUpDown( n, s, 'down' )
+
+    upRma   = fRma( 0, up, le )
+    downRma = fRma( 0, down, le )
+
+    rs  = downRma == 0 ? na : ( upRma / downRma )
+    rsi = na( rs ) ? na : ( 100 - ( 100 / ( 1 + rs ) ) )
+    rsi
+
+// @function    Calculate RSI with smoothing for MTF support
+// @returns     (float) Smoothed RSI value
+fCalcRsi() =>
+    rsiBase = fRsi( vOffSet, vLength, vSource )
+    fMa( 0, rsiBase, vSmooth )
+
+// @function    Determines plot color based on trend direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green if rising, red if falling
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+vRsi                            = vTimeframe == "" ? fCalcRsi() : request.security( syminfo.tickerid, vTimeframe, fCalcRsi() )
+
+//-------------------------------------
+// PLOT
+
+vUpperBand                      = hline( 70, color = cUpperBand, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
+vLowerBand                      = hline( 30, color = cLowerBand, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
+
+vPlotRsi                        = plot( vRsi, style = plot.style_line, color = fColor( 0, vRsi ), title = "RSI" )
+
+//-------------------------------------

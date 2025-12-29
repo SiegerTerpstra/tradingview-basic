@@ -1,0 +1,125 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - W%R (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Williams %R - a momentum oscillator measuring overbought/oversold levels.
+// Developed by Larry Williams. Shows where the close is relative to the
+// high-low range over a specified period.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - Classic Williams %R formula
+// - Optional smoothing via MA
+// - Dynamic color based on rising/falling values
+// - Overbought/Oversold bands at -20/-80
+
+//-------------------------------------
+// NOTES
+// - Values oscillate between 0 and -100
+// - Above -20 = overbought (potential sell signal)
+// - Below -80 = oversold (potential buy signal)
+// - W%R = (Highest High - Close) / (Highest High - Lowest Low) * -100
+// - Similar to Stochastic but inverted scale
+// - Division-by-zero protected (returns -50 when range is 0)
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Williams %R"
+vShort                          = "W%R"
+vOverlay                        = false
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupWpr                    = "W%R (Standard: close, 14, 1, -20, -80)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupWpr )
+vLength                         = input.int( defval = 10, minval = 1, maxval = 1024, title = "Length", group = groupWpr )
+vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupWpr )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupWpr )
+vUpperBandValue                 = input.int( defval = -20, minval = -100, maxval = 0, title = "Upper Band", group = groupWpr )
+vLowerBandValue                 = input.int( defval = -80, minval = -100, maxval = 0, title = "Lower Band", group = groupWpr )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+cUpperBand                      = color.black
+cLowerBand                      = color.black
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Williams %R calculation
+// @param       n (int) Offset for lookback
+// @param       s (series float) Source data (typically close)
+// @param       le (int) Lookback period
+// @returns     (float) W%R value between 0 and -100
+fWpR( n, s, le ) =>
+    hi = ta.highest( high[ n ], le )
+    lo = ta.lowest( low[ n ], le )
+    rng = hi - lo
+    r = rng == 0 ? -50.0 : ( ( hi - s[ n ] ) / rng * -100 )
+    r
+
+// @function    Calculate W%R with smoothing for MTF support
+// @returns     (float) Smoothed W%R value
+fCalcWpR() =>
+    wprBase = fWpR( vOffSet, vSource, vLength )
+    fMa( 0, wprBase, vSmooth )
+
+// @function    Determines plot color based on trend direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green if rising, red if falling
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+vWpR                            = vTimeframe == "" ? fCalcWpR() : request.security( syminfo.tickerid, vTimeframe, fCalcWpR() )
+
+//-------------------------------------
+// PLOT
+
+vUpperBand                      = hline( vUpperBandValue, color = cUpperBand, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band" )
+vLowerBand                      = hline( vLowerBandValue, color = cLowerBand, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band" )
+
+vPlotWpR                        = plot( vWpR, style = plot.style_line, color = fColor( 0, vWpR ), title = "W%R" )
+
+//-------------------------------------

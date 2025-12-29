@@ -1,0 +1,108 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - HML (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// High Minus Low (HML) indicator - measures the range between high and low
+// prices for each bar. Used to analyze volatility and price expansion/contraction.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - Histogram showing per-bar high-low range
+// - Moving average line for smoothed range analysis
+// - Dynamic color based on rising/falling values
+
+//-------------------------------------
+// NOTES
+// - Higher values = larger candle bodies / higher volatility
+// - Lower values = smaller candles / consolidation
+// - MA line helps identify average volatility over period
+// - Useful for detecting breakout potential
+// - Compare current range to MA for relative volatility
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "High - Low"
+vShort                          = "HML"
+vOverlay                        = false
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupHml                    = "HML (Standard: 9)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vLength                         = input.int( defval = 9, minval = 1, maxval = 1024, title = "Length", group = groupHml )
+
+//-------------------------------------
+// COLORS
+
+cHistogramBullish               = #0000b3
+cHistogramBearish               = #6666ff
+cLine                           = #b30086
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       l (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, l ) =>
+    r = float( 0 )
+    for i = 0 to ( l - 1 )
+        r := ( r + s[ n + i ] )
+    a = r / l
+    a
+
+// @function    Calculate HML histogram and line for MTF support
+// @returns     (tuple) Histogram and MA line values
+fCalcHml() =>
+    histogram = high - low
+    line      = fMa( 0, histogram, vLength )
+    [ histogram, line ]
+
+// @function    Determines histogram color based on trend direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Dark blue if rising, light blue if falling
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cHistogramBullish : cHistogramBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+[ vHighLowHistogram, vHighLowLine ] = if vTimeframe == ""
+    fCalcHml()
+else
+    request.security( syminfo.tickerid, vTimeframe, fCalcHml() )
+
+//-------------------------------------
+// PLOT
+
+vPlotHighLow                    = plot( vHighLowHistogram, style = plot.style_columns, color = fColor( 0, vHighLowHistogram ), title = "HML - Histogram" )
+vPlotHml                        = plot( vHighLowLine, style = plot.style_line, color = cLine, title = "HML - Line" )
+
+//-------------------------------------

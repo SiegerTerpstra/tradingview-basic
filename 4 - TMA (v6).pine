@@ -1,0 +1,119 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - TMA (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Triangular Moving Average (TMA) - a double-smoothed moving average that
+// applies an SMA to an SMA. Creates a smoother, more lagged line than
+// standard moving averages.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - Double smoothing (MA of MA)
+// - Optional additional smoothing pass
+// - Offset parameter for historical analysis
+// - Dynamic color based on rising/falling values
+
+//-------------------------------------
+// NOTES
+// - TMA = SMA of SMA (triangular weighting)
+// - Smoother than SMA or EMA, but more lag
+// - Better at filtering noise in choppy markets
+// - Useful for identifying underlying trend direction
+// - Price above TMA = bullish, below = bearish
+// - TMA crossovers are slower but more reliable signals
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Triangular Moving Average"
+vShort                          = "TMA"
+vOverlay                        = true
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupTma                    = "TMA (Standard: close, 9, 1)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupTma )
+vLength                         = input.int( defval = 9, minval = 1, maxval = 1024, title = "Length", group = groupTma )
+vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupTma )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupTma )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Triangular Moving Average (MA of MA)
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length for both MA calculations
+// @returns     (float) Double-smoothed average value
+fTma( n, s, le ) =>
+    r = float( 0 )
+    ma = fMa( n, s, le )
+    for i = 0 to ( le - 1 )
+        r := ( r + ma[ i ] )
+    a = r / le
+    a
+
+// @function    Calculate TMA with smoothing for MTF support
+// @returns     (float) Smoothed TMA value
+fCalcTma() =>
+    tmaBase = fTma( vOffSet, vSource, vLength )
+    fMa( 0, tmaBase, vSmooth )
+
+// @function    Determines plot color based on trend direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green if rising, red if falling
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+vTma                            = vTimeframe == "" ? fCalcTma() : request.security( syminfo.tickerid, vTimeframe, fCalcTma() )
+
+//-------------------------------------
+// PLOT
+
+vPlotTma                        = plot( vTma, style = plot.style_line, color = fColor( 0, vTma ), title = "TMA" )
+
+//-------------------------------------

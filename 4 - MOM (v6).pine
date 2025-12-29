@@ -1,0 +1,123 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - MOM (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Momentum (MOM) indicator - measures the rate of change in price by
+// comparing the current price to a price N periods ago. Simple but
+// effective for identifying trend strength and potential reversals.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - Simple momentum calculation (current - N periods ago)
+// - Optional smoothing via MA
+// - Offset parameter for historical analysis
+// - Dynamic color based on position and direction
+
+//-------------------------------------
+// NOTES
+// - Positive values = price higher than N periods ago (bullish)
+// - Negative values = price lower than N periods ago (bearish)
+// - Zero line crossovers signal momentum shifts
+// - Rising momentum = strengthening trend
+// - Falling momentum = weakening trend
+// - Divergence between price and MOM signals reversals
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Momentum"
+vShort                          = "MOM"
+vOverlay                        = false
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupMom                    = "MOM (Standard: close, 10, 1)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupMom )
+vLength                         = input.int( defval = 10, minval = 1, maxval = 1024, title = "Length", group = groupMom )
+vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupMom )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupMom )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+cBullishLight                   = #B2DFDB
+cBearishLight                   = #FFCDD2
+cMedian                         = #666666
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Momentum calculation (current price - price N periods ago)
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Lookback period
+// @returns     (float) Momentum value (positive or negative)
+fMom( n, s, le ) =>
+    r = float( 0 )
+    r := ( s[ n ] - s[ n + le ] )
+    r
+
+// @function    Calculate Momentum with smoothing for MTF support
+// @returns     (float) Smoothed Momentum value
+fCalcMom() =>
+    momBase = fMom( vOffSet, vSource, vLength )
+    fMa( 0, momBase, vSmooth )
+
+// @function    Determines histogram color based on position and direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green shades if positive, red shades if negative
+fColor( n, s ) =>
+    r = ( s[ n ] >= 0 ) ? ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBullishLight : ( s[ n + 1 ] > s[ n ] ) ? cBearish : cBearishLight
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+vMom                            = vTimeframe == "" ? fCalcMom() : request.security( syminfo.tickerid, vTimeframe, fCalcMom() )
+
+//-------------------------------------
+// PLOT
+
+vLineMedian                     = hline( 0, color = cMedian, linestyle = hline.style_dashed, linewidth = 1, title = "Median", editable = true )
+
+vPlotMom                        = plot( vMom, style = plot.style_histogram, linewidth = 4, color = fColor( 0, vMom ), title = "Momentum" )
+
+//-------------------------------------

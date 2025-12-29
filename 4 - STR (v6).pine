@@ -1,0 +1,146 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - STR (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// SuperTrend indicator - a trend-following overlay that uses ATR to create
+// dynamic support/resistance levels. Flips between above and below price
+// based on trend direction.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - ATR-based dynamic support/resistance levels
+// - Separate multipliers for positive and negative bands
+// - Trend state tracking (above/below)
+// - Visual fill between price and trend line
+// - Line break style for clean trend changes
+
+//-------------------------------------
+// NOTES
+// - Green line below price = uptrend (support)
+// - Red line above price = downtrend (resistance)
+// - Band levels adjust based on ATR volatility
+// - Higher multiplier = wider bands, fewer signals
+// - Lower multiplier = tighter bands, more signals
+// - Trend flips when price crosses opposite band
+// - Uses hl2 (high+low)/2 as band center
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "SuperTrend"
+vShort                          = "STR"
+vOverlay                        = true
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupStr                    = "SuperTrend (Standard: close, 3, 3, 10)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vStrSource                      = input.source( defval = close, title = "Source", group = groupStr )
+vStrPositiveMultiplier          = input.float( defval = 1.1, minval = 0.1, maxval = 1024, title = "Positive Multiplier", step = 0.1, group = groupStr )
+vStrNegativeMultiplier          = input.float( defval = 1.1, minval = 0.1, maxval = 1024, title = "Negative Multiplier", step = 0.1, group = groupStr )
+vStrLength                      = input.int( defval = 10, minval = 1, maxval = 1024, title = "Length", group = groupStr )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+cBullishFill                    = color.new( #26A69A, 80 )
+cBearishFill                    = color.new( #EF5350, 80 )
+cMedian                         = color.new( color.white, 100 )
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Calculate upper trend level (support in uptrend)
+// @param       n (int) Offset for lookback
+// @param       s (series float) Source data for trend detection
+// @param       l (int) ATR length
+// @param       m (float) ATR multiplier
+// @returns     (float) Dynamic support level
+fTrendLevelAbove( n, s, l, m ) =>
+    base = ( hl2[ n ] - ( m * ta.atr( l ) ) )
+    var float r = na
+    prev = nz( r[ 1 ], base )
+    r := ( s[ n + 1 ] > prev ) ? math.max( base, prev ) : base
+    r
+
+// @function    Calculate lower trend level (resistance in downtrend)
+// @param       n (int) Offset for lookback
+// @param       s (series float) Source data for trend detection
+// @param       l (int) ATR length
+// @param       m (float) ATR multiplier
+// @returns     (float) Dynamic resistance level
+fTrendLevelBelow( n, s, l, m ) =>
+    base = ( hl2[ n ] + ( m * ta.atr( l ) ) )
+    var float r = na
+    prev = nz( r[ 1 ], base )
+    r := ( s[ n + 1 ] < prev ) ? math.min( base, prev ) : base
+    r
+
+// @function    Determine if price is above or below trend
+// @param       n (int) Offset for lookback
+// @param       s (series float) Source data
+// @param       a (series float) Above level (support)
+// @param       b (series float) Below level (resistance)
+// @returns     (bool) True if uptrend, false if downtrend
+fAboveOrBelow( n, s, a, b ) =>
+    var bool r = false
+    r := s[ n ] > b[ n ] ? true : s[ n ] < a[ n ] ? false : r[ 1 ]
+    r
+
+// @function    Calculate SuperTrend components for MTF support
+// @returns     (tuple) Above level, below level, trend direction, ohlc4
+fCalcStr() =>
+    levelAbove   = fTrendLevelAbove( 0, vStrSource, vStrLength, vStrPositiveMultiplier )
+    levelBelow   = fTrendLevelBelow( 0, vStrSource, vStrLength, vStrNegativeMultiplier )
+    aboveOrBelow = fAboveOrBelow( 0, vStrSource, levelAbove, levelBelow )
+    [ levelAbove, levelBelow, aboveOrBelow, ohlc4 ]
+
+//-------------------------------------
+// CALCULATIONS
+
+[ vStrLevelAbove, vStrLevelBelow, vStrAboveOrBelow, vOhlc4 ] = if vTimeframe == ""
+    fCalcStr()
+else
+    request.security( syminfo.tickerid, vTimeframe, fCalcStr() )
+
+//-------------------------------------
+// PLOT
+
+vStrAbove                       = vStrAboveOrBelow ? vStrLevelAbove : na
+vPlotStrAbove                   = plot( vStrAbove, style = plot.style_linebr, linewidth = 1, color = cBullish, title = "Above" )
+
+vStrBelow                       = not vStrAboveOrBelow ? vStrLevelBelow : na
+vPlotStrBelow                   = plot( vStrBelow, style = plot.style_linebr, linewidth = 1, color = cBearish, title = "Below" )
+
+//-------------------------------------
+// FILL
+
+vStrLevelMedian                 = plot( vOhlc4, style = plot.style_line, linewidth = 1, color = cMedian, title = "Median", editable = false )
+fill( vStrLevelMedian, vPlotStrAbove, color = cBullishFill, title = "Background Above" )
+fill( vStrLevelMedian, vPlotStrBelow, color = cBearishFill, title = "Background Below" )
+
+//-------------------------------------

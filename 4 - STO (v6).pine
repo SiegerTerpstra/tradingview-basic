@@ -1,0 +1,140 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - STO (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Stochastic Oscillator - a momentum indicator comparing closing price to
+// its price range over a given period. Developed by George Lane in the 1950s.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - %K line (raw stochastic with smoothing)
+// - %D line (signal line - MA of %K)
+// - Separate smoothing for %K and %D
+// - Offset parameter for historical analysis
+// - Dynamic color based on %K vs %D position
+
+//-------------------------------------
+// NOTES
+// - Values oscillate between 0 and 100
+// - Above 80 = overbought (potential sell signal)
+// - Below 20 = oversold (potential buy signal)
+// - %K = (Current Close - Lowest Low) / (Highest High - Lowest Low) * 100
+// - %D = SMA of %K (signal line)
+// - %K crossing above %D = bullish signal
+// - %K crossing below %D = bearish signal
+// - Division-by-zero protected (returns 50 when range is 0)
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Stochastic"
+vShort                          = "STO"
+vOverlay                        = false
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupSto                    = "STO (Standard: close, 14, 3, 3, 3, 20, 80)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupSto )
+vKLength                        = input.int( defval = 14, minval = 1, maxval = 1024, title = "%K - Length", group = groupSto )
+vDLength                        = input.int( defval = 3, minval = 1, maxval = 1024, title = "%D - Length", group = groupSto )
+vKSmooth                        = input.int( defval = 3, minval = 1, maxval = 1024, title = "%K - Smooth", group = groupSto )
+vDSmooth                        = input.int( defval = 3, minval = 1, maxval = 1024, title = "%D - Smooth", group = groupSto )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupSto )
+vLowerBandValue                 = input.int( defval = 20, minval = 0, maxval = 100, title = "Lower Band", group = groupSto )
+vUpperBandValue                 = input.int( defval = 80, minval = 0, maxval = 100, title = "Upper Band", group = groupSto )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+cD                              = #999999
+cUpperBand                      = color.black
+cLowerBand                      = color.black
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Stochastic %K calculation
+// @param       n (int) Offset for lookback
+// @param       s (series float) Source data
+// @param       kl (int) %K lookback length
+// @param       dl (int) Unused (kept for compatibility)
+// @returns     (float) Raw %K value between 0 and 100
+fStoK( n, s, kl, dl ) =>
+    hi = ta.highest( high[ n ], kl )
+    lo = ta.lowest( low[ n ], kl )
+    rng = hi - lo
+    r = rng == 0 ? 50.0 : ( ( s[ n ] - lo ) / rng * 100 )
+    r
+
+// @function    Calculate Stochastic %K and %D for MTF support
+// @returns     (tuple) %K and %D values
+fCalcSto() =>
+    stoKBase = fStoK( vOffSet, vSource, vKLength, vDLength )
+    stoK     = fMa( 0, stoKBase, vKSmooth )
+    stoD     = fMa( 0, stoK, vDSmooth )
+    [ stoK, stoD ]
+
+// @function    Determines %K line color based on %K vs %D
+// @param       n (int) Offset for comparison
+// @param       k (series float) %K values
+// @param       d (series float) %D values
+// @returns     (color) Green if %K > %D, red otherwise
+fColorK( n, k, d ) =>
+    r = ( k[ n ] > d[ n ] ) ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+[ vStoK, vStoD ] = if vTimeframe == ""
+    fCalcSto()
+else
+    request.security( syminfo.tickerid, vTimeframe, fCalcSto() )
+
+//-------------------------------------
+// PLOT
+
+vUpperBand                      = hline( vUpperBandValue, color = cUpperBand, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band" )
+vLowerBand                      = hline( vLowerBandValue, color = cLowerBand, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band" )
+
+vPlotStoK                       = plot( vStoK, style = plot.style_line, color = fColorK( 0, vStoK, vStoD ), title = "STO %K" )
+vPlotStoD                       = plot( vStoD, style = plot.style_line, color = cD, title = "STO %D" )
+
+//-------------------------------------

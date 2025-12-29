@@ -1,0 +1,142 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - DSS (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Double Smoothed Stochastic (DSS) - A momentum oscillator that applies
+// double smoothing to reduce noise and provide clearer trend signals.
+// Combines EMA ratio analysis with stochastic normalization.
+
+//-------------------------------------
+// FEATURES
+// - Configurable fast/slow EMA lengths for ratio calculation
+// - Double stochastic smoothing (K and D normalization)
+// - Optional final smoothing via MA
+// - Offset parameter for historical analysis
+// - Dynamic color based on rising/falling values
+
+//-------------------------------------
+// NOTES
+// - Values oscillate between 0 and 100
+// - Above 85 = overbought zone
+// - Below 15 = oversold zone
+// - EMA state is preserved using var for proper series calculation
+// - Division-by-zero protected with fallback to 0.5 (midpoint)
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Double Smoothed Stochastic"
+vShort                          = "DSS"
+vOverlay                        = false
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupDss                    = "DSS (Standard: close, 3, 9, 1, 10, 90)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupDss )
+vLengthFast                     = input.int( defval = 5, minval = 1, maxval = 1024, title = "Fast Length", group = groupDss )
+vLengthSlow                     = input.int( defval = 9, minval = 1, maxval = 1024, title = "Slow Length", group = groupDss )
+vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupDss )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupDss )
+vLowerBandValue                 = input.int( defval = 15, minval = 0, maxval = 100, title = "Lower Band", group = groupDss )
+vUpperBandValue                 = input.int( defval = 85, minval = 0, maxval = 100, title = "Upper Band", group = groupDss )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+cUpperBand                      = #666666
+cLowerBand                      = #666666
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Exponential Moving Average with MA seeding
+// @param       n (int) Offset for source indexing
+// @param       s (series float) Source data
+// @param       le (int) Length for EMA calculation
+// @returns     (float) EMA value with persistent state
+fEma( n, s, le ) =>
+    ma = fMa( n, s, le )
+    var float r = na
+    r := na( r[ 1 ] ) ? ma : ( r[ 1 ] + ( 2 / ( le + 1 ) ) * ( s[ n ] - r[ 1 ] ) )
+    r
+
+// @function    Double Smoothed Stochastic calculation
+// @param       n (int) Offset for source indexing
+// @param       s (series float) Source data
+// @param       ls (int) Slow length for stochastic range
+// @param       lf (int) Fast length for EMA smoothing
+// @returns     (float) DSS value between 0 and 100
+fDss( n, s, ls, lf ) =>
+    ratio   = ( fEma( 0, s[ n ], lf ) / fEma( 0, s[ n ], ls ) )
+    diffr   = ( ta.highest( ratio, ls ) - ta.lowest( ratio, ls ) )
+    kRaw    = diffr == 0 ? 0.5 : ( ( ratio - ta.lowest( ratio, ls ) ) / diffr )
+    average = ( fEma( 0, kRaw, lf ) * 100 )
+    diffa   = ( ta.highest( average, ls ) - ta.lowest( average, ls ) )
+    dRaw    = diffa == 0 ? 0.5 : ( ( average - ta.lowest( average, ls ) ) / diffa )
+    dss     = ( fEma( 0, dRaw, lf ) * 100 )
+    r       = dss
+    r
+
+// @function    Main DSS calculation wrapper
+// @returns     (float) Final smoothed DSS value
+fCalcDss() =>
+    fMa( 0, fDss( vOffSet, vSource, vLengthSlow, vLengthFast ), vSmooth )
+
+// @function    Determines plot color based on trend direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green if rising, red if falling
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+vDss                            = vTimeframe == "" ? fCalcDss() : request.security( syminfo.tickerid, vTimeframe, fCalcDss() )
+
+//-------------------------------------
+// PLOT
+
+vUpperBand                      = hline( vUpperBandValue, color = cUpperBand, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
+vLowerBand                      = hline( vLowerBandValue, color = cLowerBand, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
+
+vPlotDss                        = plot( vDss, style = plot.style_line, color = fColor( 0, vDss ), title = "DSS" )
+
+//-------------------------------------

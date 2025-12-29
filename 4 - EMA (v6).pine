@@ -1,0 +1,117 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - EMA (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Exponential Moving Average (EMA) - a weighted moving average that gives
+// more weight to recent prices. Reacts faster to price changes than SMA.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - Custom EMA formula with MA seeding
+// - Optional smoothing via additional MA pass
+// - Offset parameter for historical analysis
+// - Dynamic color based on rising/falling values
+
+//-------------------------------------
+// NOTES
+// - EMA multiplier = 2 / (length + 1)
+// - First EMA value seeded with SMA
+// - More responsive to recent price changes than SMA
+// - Commonly used lengths: 9, 12, 21, 26, 50, 200
+// - Price above EMA = bullish, below = bearish
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Exponential Moving Average"
+vShort                          = "EMA"
+vOverlay                        = true
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupEma                    = "EMA (Standard: close, 9, 1)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupEma )
+vLength                         = input.int( defval = 9, minval = 1, maxval = 1024, title = "Length", group = groupEma )
+vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupEma )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupEma )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Exponential Moving Average with MA seeding
+// @param       n (int) Offset for source indexing
+// @param       s (series float) Source data
+// @param       le (int) Length for EMA calculation
+// @returns     (float) EMA value with persistent state
+fEma( n, s, le ) =>
+    ma = fMa( n, s, le )
+    var float r = na
+    r := na( r[ 1 ] ) ? ma : ( r[ 1 ] + ( 2 / ( le + 1 ) ) * ( s[ n ] - r[ 1 ] ) )
+    r
+
+// @function    Calculate EMA with smoothing for MTF support
+// @returns     (float) Smoothed EMA value
+fCalcEma() =>
+    emaBase = fEma( vOffSet, vSource, vLength )
+    fMa( 0, emaBase, vSmooth )
+
+// @function    Determines plot color based on trend direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green if rising, red if falling
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+vEma                            = vTimeframe == "" ? fCalcEma() : request.security( syminfo.tickerid, vTimeframe, fCalcEma() )
+
+//-------------------------------------
+// PLOT
+
+vPlotEma                        = plot( vEma, style = plot.style_line, color = fColor( 0, vEma ), title = "EMA" )
+
+//-------------------------------------

@@ -1,0 +1,120 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - RMA (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Rolling Moving Average (RMA) - also known as Wilder's Smoothing or SMMA.
+// A smoothed moving average that gives more weight to recent data while
+// maintaining a longer memory of past prices than EMA.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - Wilder's smoothing formula
+// - MA-seeded initialization
+// - Optional smoothing via additional MA pass
+// - Offset parameter for historical analysis
+// - Dynamic color based on rising/falling values
+
+//-------------------------------------
+// NOTES
+// - RMA = (previous RMA * (length - 1) + current price) / length
+// - Smoother than EMA, slower to react
+// - Used in RSI, ATR, and ADX calculations
+// - Alpha = 1/length (vs EMA alpha = 2/(length+1))
+// - Commonly used lengths: 9, 14, 21
+// - Price above RMA = bullish, below = bearish
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Rolling Moving Average"
+vShort                          = "RMA"
+vOverlay                        = true
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupRma                    = "RMA (Standard: close, 9, 1)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupRma )
+vLength                         = input.int( defval = 9, minval = 1, maxval = 1024, title = "Length", group = groupRma )
+vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupRma )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupRma )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Rolling Moving Average (Wilder's Smoothing)
+// @param       n (int) Offset for source indexing
+// @param       s (series float) Source data
+// @param       le (int) Length for RMA calculation
+// @returns     (float) RMA value with persistent state
+fRma( n, s, le ) =>
+    ma = fMa( n, s, le )
+    var float r = na
+    r := na( r[ 1 ] ) ? ma : ( ( r[ 1 ] * ( le - 1 ) ) + s[ n ] ) / le
+    r
+
+// @function    Calculate RMA with smoothing for MTF support
+// @returns     (float) Smoothed RMA value
+fCalcRma() =>
+    rmaBase = fRma( vOffSet, vSource, vLength )
+    fMa( 0, rmaBase, vSmooth )
+
+// @function    Determines plot color based on trend direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green if rising, red if falling
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+vRma                            = vTimeframe == "" ? fCalcRma() : request.security( syminfo.tickerid, vTimeframe, fCalcRma() )
+
+//-------------------------------------
+// PLOT
+
+vPlotRma                        = plot( vRma, style = plot.style_line, color = fColor( 0, vRma ), title = "RMA" )
+
+//-------------------------------------

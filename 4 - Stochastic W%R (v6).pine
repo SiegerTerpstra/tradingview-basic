@@ -1,0 +1,163 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2025-12-29
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - Stochastic W%R (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Stochastic-style Williams %R - a momentum oscillator using Stochastic
+// calculation with K and D lines. Combines Stochastic smoothing with
+// Williams %R concepts for crossover signals.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - K line: Smoothed Stochastic
+// - D line: Signal line (SMA of K)
+// - K/D crossover signals
+// - Configurable bands and entry/exit levels
+// - Dynamic color based on K vs D and rising/falling
+
+//-------------------------------------
+// NOTES
+// - Values oscillate between 0 and 100
+// - K above D = bullish momentum
+// - K below D = bearish momentum
+// - Entry signal: K crosses above D below entry level
+// - Exit signal: K crosses below D above exit level
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V1.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Stochastic W%R"
+vShort                          = "Sto W%R"
+vOverlay                        = false
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupSwr                    = "Stochastic W%R (Standard: close, 10, 5, 5)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupSwr )
+vLengthK                        = input.int( defval = 13, minval = 1, maxval = 1024, title = "K - Length", group = groupSwr )
+vSmoothK                        = input.int( defval = 4, minval = 1, maxval = 1024, title = "K - Smooth", group = groupSwr )
+vPeriodD                        = input.int( defval = 6, minval = 1, maxval = 1024, title = "D - Period", group = groupSwr )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupSwr )
+vLowerBandValue                 = input.int( defval = 5, minval = 0, maxval = 100, title = "Lower Band", group = groupSwr )
+vUpperBandValue                 = input.int( defval = 95, minval = 0, maxval = 100, title = "Upper Band", group = groupSwr )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+cMedian                         = color.gray
+cUpperBand                      = color.red
+cLowerBand                      = color.green
+cD                              = color.gray
+cFillTransparency               = 75
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Stochastic calculation
+// @param       n (int) Offset for lookback
+// @param       s (series float) Source data
+// @param       le (int) Lookback period
+// @returns     (float) Stochastic value between 0 and 100
+fStoch( n, s, le ) =>
+    hi  = ta.highest( high[ n ], le )
+    lo  = ta.lowest( low[ n ], le )
+    rng = hi - lo
+    r   = rng == 0 ? 50.0 : ( ( s[ n ] - lo ) / rng * 100 )
+    r
+
+// @function    Calculate K line (smoothed stochastic)
+// @param       n (int) Offset
+// @param       s (series float) Source data
+// @param       le (int) Stochastic length
+// @param       sm (int) Smoothing period
+// @returns     (float) Smoothed K value
+fK( n, s, le, sm ) =>
+    stochRaw = fStoch( n, s, le )
+    fMa( 0, stochRaw, sm )
+
+// @function    Calculate D line (signal line)
+// @param       k (series float) K line values
+// @param       pe (int) Period for D line
+// @returns     (float) D value (SMA of K)
+fD( k, pe ) =>
+    fMa( 0, k, pe )
+
+// @function    Calculate Stochastic W%R for MTF support
+// @returns     (tuple) K and D values
+fCalcStoWpr() =>
+    k = fK( vOffSet, vSource, vLengthK, vSmoothK )
+    d = fD( k, vPeriodD )
+    [ k, d ]
+
+// @function    Color based on rising/falling K
+// @param       s (series float) K line
+// @returns     (color) Green if rising, red if falling
+fColorRising( s ) =>
+    r = s > s[ 1 ] ? cBullish : cBearish
+    r
+
+// @function    Color based on K vs D
+// @param       k (series float) K line
+// @param       d (series float) D line
+// @returns     (color) Green if K > D, red if K < D
+fColorKvsD( k, d ) =>
+    r = k > d ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+[ vK, vD ] = if vTimeframe == ""
+    fCalcStoWpr()
+else
+    request.security( syminfo.tickerid, vTimeframe, fCalcStoWpr() )
+
+//-------------------------------------
+// PLOT
+
+vLineMedian                     = hline( 50, color = cMedian, linestyle = hline.style_dashed, linewidth = 1, title = "Median" )
+vLineLowerBand                  = hline( vLowerBandValue, color = cLowerBand, linestyle = hline.style_dotted, linewidth = 2, title = "Lower Band" )
+vLineUpperBand                  = hline( vUpperBandValue, color = cUpperBand, linestyle = hline.style_dotted, linewidth = 2, title = "Upper Band" )
+
+vPlotK                          = plot( vK, color = fColorRising( vK ), style = plot.style_line, linewidth = 2, title = "K" )
+vPlotD                          = plot( vD, color = cD, style = plot.style_line, linewidth = 1, title = "D" )
+
+fill( vPlotK, vPlotD, color = color.new( fColorKvsD( vK, vD ), cFillTransparency ), title = "K/D Background" )
+
+//-------------------------------------

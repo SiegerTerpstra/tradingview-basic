@@ -1,0 +1,174 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - MACD (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Moving Average Convergence Divergence (MACD) - a trend-following momentum
+// indicator showing the relationship between two EMAs. Developed by Gerald Appel.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - MACD line (fast EMA - slow EMA)
+// - Signal line (EMA of MACD)
+// - Histogram (MACD - Signal)
+// - Separate smoothing for MACD and Signal
+// - Offset parameter for historical analysis
+// - Dynamic colors for all components
+
+//-------------------------------------
+// NOTES
+// - Default settings: 12/26/9 (fast/slow/signal)
+// - MACD above Signal = bullish momentum
+// - MACD below Signal = bearish momentum
+// - Histogram shows momentum strength
+// - Zero line crossovers indicate trend changes
+// - Divergence between price and MACD signals reversals
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Moving Average Convergence Divergence"
+vShort                          = "MACD"
+vOverlay                        = false
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupMacd                   = "MACD (Standard: close, 12, 26, 9, 1, 1)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupMacd )
+vFastLength                     = input.int( defval = 12, minval = 1, maxval = 1024, title = "Fast Length", group = groupMacd )
+vSlowLength                     = input.int( defval = 26, minval = 1, maxval = 1024, title = "Slow Length", group = groupMacd )
+vSignalLength                   = input.int( defval = 9, minval = 1, maxval = 1024, title = "Signal Length", group = groupMacd )
+vSmoothMacD                     = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth MacD", group = groupMacd )
+vSmoothSignal                   = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth Signal", group = groupMacd )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupMacd )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+cBullishLight                   = #B2DFDB
+cBearishLight                   = #FFCDD2
+cSignal                         = #999999
+cMedian                         = #666666
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Exponential Moving Average with MA seeding
+// @param       n (int) Offset for source indexing
+// @param       s (series float) Source data
+// @param       le (int) Length for EMA calculation
+// @returns     (float) EMA value with persistent state
+fEma( n, s, le ) =>
+    ma = fMa( n, s, le )
+    var float r = na
+    r := na( r[ 1 ] ) ? ma : ( r[ 1 ] + ( 2 / ( le + 1 ) ) * ( s[ n ] - r[ 1 ] ) )
+    r
+
+// @function    Calculate MACD line (fast EMA - slow EMA)
+// @param       n (int) Offset for source indexing
+// @param       s (series float) Source data
+// @param       lf (int) Fast EMA length
+// @param       ls (int) Slow EMA length
+// @returns     (float) MACD value
+fMacd( n, s, lf, ls ) =>
+    emaf = fEma( n, s, lf )
+    emas = fEma( n, s, ls )
+    macd = ( emaf - emas )
+    macd
+
+// @function    Calculate Signal line (EMA of MACD)
+// @param       macd (series float) MACD line values
+// @param       li (int) Signal EMA length
+// @returns     (float) Signal line value
+fSignal( macd, li ) =>
+    signal = fEma( 0, macd, li )
+    signal
+
+// @function    Calculate Histogram (MACD - Signal)
+// @param       macd (series float) MACD line value
+// @param       signal (series float) Signal line value
+// @returns     (float) Histogram value
+fHistogram( macd, signal ) =>
+    histogram = ( macd - signal )
+    histogram
+
+// @function    Calculate all MACD components for MTF support
+// @returns     (tuple) MACD, Signal, and Histogram values
+fCalcMacd() =>
+    macdBase   = fMacd( vOffSet, vSource, vFastLength, vSlowLength )
+    macd       = fMa( 0, macdBase, vSmoothMacD )
+    signalBase = fSignal( macd, vSignalLength )
+    signal     = fMa( 0, signalBase, vSmoothSignal )
+    histogram  = fHistogram( macd, signal )
+    [ macd, signal, histogram ]
+
+// @function    Determines MACD line color based on direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green if rising, red if falling
+fColorMacd( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBearish
+    r
+
+// @function    Determines Histogram color based on position and direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green shades if positive, red shades if negative
+fColorHistogram( n, s ) =>
+    r = ( s[ n ] >= 0 ) ? ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBullishLight : ( s[ n + 1 ] > s[ n ] ) ? cBearish : cBearishLight
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+[ vMacd, vSignal, vHistogram ] = if vTimeframe == ""
+    fCalcMacd()
+else
+    request.security( syminfo.tickerid, vTimeframe, fCalcMacd() )
+
+//-------------------------------------
+// PLOT
+
+vLineMedian                     = hline( 0, color = cMedian, linestyle = hline.style_dashed, linewidth = 1, title = "Median", editable = true )
+
+vPlotMacd                       = plot( vMacd, style = plot.style_line, color = fColorMacd( 0, vMacd ), title = "MacD" )
+vPlotSignal                     = plot( vSignal, style = plot.style_line, color = cSignal, title = "Signal" )
+vPlotHistogram                  = plot( vHistogram, style = plot.style_columns, color = fColorHistogram( 0, vHistogram ), title = "Histogram" )
+
+//-------------------------------------

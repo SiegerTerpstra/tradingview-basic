@@ -1,0 +1,107 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © sajjetti
+
+//@version=6
+
+//-------------------------------------
+
+// Release:                     2020-08-05
+// Update:                      2025-12-29
+// Author:                      sajjetti
+// Email:                       contact@sajjetti.ai
+// Website:                     sajjetti.ai
+// Profile:                     https://www.tradingview.com/u/stmd/
+// Pineversion:                 6
+// Filename:                    4 - MA (v6).pine
+
+//-------------------------------------
+// PURPOSE
+// Simple Moving Average (SMA) - calculates the arithmetic mean of prices
+// over a specified period. The most basic and widely used moving average.
+
+//-------------------------------------
+// FEATURES
+// - Multi-timeframe support via Indicator Timeframe input
+// - Custom SMA calculation with offset support
+// - Optional smoothing via additional MA pass
+// - Offset parameter for historical analysis
+// - Dynamic color based on rising/falling values
+
+//-------------------------------------
+// NOTES
+// - SMA = sum of N prices / N
+// - Equal weight given to all prices in the period
+// - Slower to react than EMA but smoother
+// - Commonly used lengths: 9, 20, 50, 100, 200
+// - Price above MA = bullish, below = bearish
+// - MA crossovers used for trend signals
+
+//-------------------------------------
+// INDICATOR PARAMETERS
+
+vVersion                        = "V2.0"
+vPineVersion                    = "ps6"
+vTitle                          = "Moving Average"
+vShort                          = "MA"
+vOverlay                        = true
+vPrecision                      = 0
+
+indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
+
+//-------------------------------------
+// INPUTS
+
+var groupMa                     = "MA (Standard: close, 9, 1)"
+
+vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
+vSource                         = input.source( defval = close, title = "Source", group = groupMa )
+vLength                         = input.int( defval = 9, minval = 1, maxval = 1024, title = "Length", group = groupMa )
+vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupMa )
+vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupMa )
+
+//-------------------------------------
+// COLORS
+
+cBullish                        = #26A69A
+cBearish                        = #EF5350
+
+//-------------------------------------
+// FUNCTIONS
+
+// @function    Simple Moving Average
+// @param       n (int) Offset for lookback starting point
+// @param       s (series float) Source data
+// @param       le (int) Length of the averaging period
+// @returns     (float) Average value over the specified period
+fMa( n, s, le ) =>
+    r = float( 0 )
+    for i = n + 0 to ( n + ( le - 1 ) )
+        r := ( r + s[ i ] )
+    a = r / le
+    a
+
+// @function    Calculate MA with smoothing for MTF support
+// @returns     (float) Smoothed MA value
+fCalcMa() =>
+    maBase = fMa( vOffSet, vSource, vLength )
+    fMa( 0, maBase, vSmooth )
+
+// @function    Determines plot color based on trend direction
+// @param       n (int) Offset for comparison
+// @param       s (series float) Source data to evaluate
+// @returns     (color) Green if rising, red if falling
+fColor( n, s ) =>
+    r = ( s[ n + 1 ] < s[ n ] ) ? cBullish : cBearish
+    r
+
+//-------------------------------------
+// CALCULATIONS
+
+vMa                             = vTimeframe == "" ? fCalcMa() : request.security( syminfo.tickerid, vTimeframe, fCalcMa() )
+
+//-------------------------------------
+// PLOT
+
+vPlotMa                         = plot( vMa, style = plot.style_line, color = fColor( 0, vMa ), title = "MA" )
+
+//-------------------------------------
