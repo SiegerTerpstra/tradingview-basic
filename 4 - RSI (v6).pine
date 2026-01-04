@@ -6,7 +6,7 @@
 //-------------------------------------
 
 // Release:                     2020-08-05
-// Update:                      2025-12-29
+// Update:                      2026-01-04
 // Author:                      sajjetti
 // Email:                       contact@sajjetti.ai
 // Website:                     sajjetti.ai
@@ -26,7 +26,7 @@
 // - Optional smoothing via additional MA pass
 // - Offset parameter for historical analysis
 // - Dynamic color based on rising/falling values
-// - Overbought/Oversold bands at 70/30
+// - Configurable Overbought/Oversold bands
 
 //-------------------------------------
 // NOTES
@@ -40,25 +40,27 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V2.0"
+vVersion                        = "V2.1"
 vPineVersion                    = "pine6"
 vTitle                          = "Relative Strength Index"
 vShort                          = "RSI"
 vOverlay                        = false
-vPrecision                      = 0
+vPrecision                      = 2
 
 indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
 
 //-------------------------------------
 // INPUTS
 
-var groupRsi                    = "RSI (Standard: close, 14, 1)"
+var groupRsi                    = "RSI (Standard: close, 15, 1)"
 
 vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
-vSource                         = input.source( defval = hl2, title = "Source", group = groupRsi )
+vSource                         = input.source( defval = close, title = "Source", group = groupRsi )
 vLength                         = input.int( defval = 15, minval = 1, maxval = 1024, title = "Length", group = groupRsi )
-vSmooth                         = input.int( defval = 6, minval = 1, maxval = 1024, title = "Smooth", group = groupRsi )
+vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupRsi )
 vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupRsi )
+vUpperBandValue                 = input.int( defval = 70, minval = 1, maxval = 100, title = "Upper Band", group = groupRsi )
+vLowerBandValue                 = input.int( defval = 30, minval = 1, maxval = 100, title = "Lower Band", group = groupRsi )
 
 //-------------------------------------
 // COLORS
@@ -141,9 +143,9 @@ vRsi                            = vTimeframe == "" ? fCalcRsi() : request.securi
 //-------------------------------------
 // PLOT
 
-vUpperBand                      = hline( 70, color = cUpperBand, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
-vLowerBand                      = hline( 30, color = cLowerBand, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
+vUpperBand                      = hline( vUpperBandValue, color = cUpperBand, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
+vLowerBand                      = hline( vLowerBandValue, color = cLowerBand, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
 
-vPlotRsi                        = plot( vRsi, style = plot.style_line, color = fColor( 0, vRsi ), title = "RSI" )
+vPlotRsi                        = plot( vRsi, style = plot.style_line, color = fColor( 0, vRsi ), title = "RSI - ST" )
 
 //-------------------------------------

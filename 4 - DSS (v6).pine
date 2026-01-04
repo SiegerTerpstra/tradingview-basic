@@ -6,7 +6,7 @@
 //-------------------------------------
 
 // Release:                     2020-08-05
-// Update:                      2025-12-29
+// Update:                      2026-01-04
 // Author:                      sajjetti
 // Email:                       contact@sajjetti.ai
 // Website:                     sajjetti.ai
@@ -39,19 +39,19 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V2.0"
+vVersion                        = "V2.1"
 vPineVersion                    = "ps6"
 vTitle                          = "Double Smoothed Stochastic"
 vShort                          = "DSS"
 vOverlay                        = false
-vPrecision                      = 0
+vPrecision                      = 2
 
 indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
 
 //-------------------------------------
 // INPUTS
 
-var groupDss                    = "DSS (Standard: close, 3, 9, 1, 10, 90)"
+var groupDss                    = "DSS (Standard: close, 5, 9, 1)"
 
 vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
 vSource                         = input.source( defval = close, title = "Source", group = groupDss )
@@ -137,6 +137,6 @@ vDss                            = vTimeframe == "" ? fCalcDss() : request.securi
 vUpperBand                      = hline( vUpperBandValue, color = cUpperBand, linestyle = hline.style_dashed, linewidth = 1, title = "Upper Band", editable = true )
 vLowerBand                      = hline( vLowerBandValue, color = cLowerBand, linestyle = hline.style_dashed, linewidth = 1, title = "Lower Band", editable = true )
 
-vPlotDss                        = plot( vDss, style = plot.style_line, color = fColor( 0, vDss ), title = "DSS" )
+vPlotDss                        = plot( vDss, style = plot.style_line, color = fColor( 0, vDss ), title = "DSS - ST" )
 
 //-------------------------------------

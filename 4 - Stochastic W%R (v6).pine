@@ -6,7 +6,7 @@
 //-------------------------------------
 
 // Release:                     2025-12-29
-// Update:                      2025-12-29
+// Update:                      2026-01-04
 // Author:                      sajjetti
 // Email:                       contact@sajjetti.ai
 // Website:                     sajjetti.ai
@@ -40,19 +40,19 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V1.0"
+vVersion                        = "V2.1"
 vPineVersion                    = "ps6"
 vTitle                          = "Stochastic W%R"
 vShort                          = "Sto W%R"
 vOverlay                        = false
-vPrecision                      = 0
+vPrecision                      = 2
 
 indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
 
 //-------------------------------------
 // INPUTS
 
-var groupSwr                    = "Stochastic W%R (Standard: close, 10, 5, 5)"
+var groupSwr                    = "Stochastic W%R (Standard: close, 13, 4, 6)"
 
 vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
 vSource                         = input.source( defval = close, title = "Source", group = groupSwr )
@@ -155,8 +155,8 @@ vLineMedian                     = hline( 50, color = cMedian, linestyle = hline.
 vLineLowerBand                  = hline( vLowerBandValue, color = cLowerBand, linestyle = hline.style_dotted, linewidth = 2, title = "Lower Band" )
 vLineUpperBand                  = hline( vUpperBandValue, color = cUpperBand, linestyle = hline.style_dotted, linewidth = 2, title = "Upper Band" )
 
-vPlotK                          = plot( vK, color = fColorRising( vK ), style = plot.style_line, linewidth = 2, title = "K" )
-vPlotD                          = plot( vD, color = cD, style = plot.style_line, linewidth = 1, title = "D" )
+vPlotK                          = plot( vK, color = fColorRising( vK ), style = plot.style_line, linewidth = 2, title = "SWPR K - ST" )
+vPlotD                          = plot( vD, color = cD, style = plot.style_line, linewidth = 1, title = "SWPR D - ST" )
 
 fill( vPlotK, vPlotD, color = color.new( fColorKvsD( vK, vD ), cFillTransparency ), title = "K/D Background" )
 

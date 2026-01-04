@@ -6,7 +6,7 @@
 //-------------------------------------
 
 // Release:                     2020-08-05
-// Update:                      2025-12-29
+// Update:                      2026-01-04
 // Author:                      sajjetti
 // Email:                       contact@sajjetti.ai
 // Website:                     sajjetti.ai
@@ -42,19 +42,19 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V2.0"
+vVersion                        = "V2.1"
 vPineVersion                    = "ps6"
 vTitle                          = "SuperTrend"
 vShort                          = "STR"
 vOverlay                        = true
-vPrecision                      = 0
+vPrecision                      = 2
 
 indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShort+" ["+vVersion+"|"+vPineVersion+"]", overlay = vOverlay, precision = vPrecision )
 
 //-------------------------------------
 // INPUTS
 
-var groupStr                    = "SuperTrend (Standard: close, 3, 3, 10)"
+var groupStr                    = "SuperTrend (Standard: close, 1.1, 1.1, 10)"
 
 vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
 vStrSource                      = input.source( defval = close, title = "Source", group = groupStr )
@@ -127,14 +127,20 @@ fCalcStr() =>
 else
     request.security( syminfo.tickerid, vTimeframe, fCalcStr() )
 
+// Combined Supertrend value (for export/validation)
+vStrValue = vStrAboveOrBelow ? vStrLevelAbove : vStrLevelBelow
+
 //-------------------------------------
 // PLOT
 
 vStrAbove                       = vStrAboveOrBelow ? vStrLevelAbove : na
-vPlotStrAbove                   = plot( vStrAbove, style = plot.style_linebr, linewidth = 1, color = cBullish, title = "Above" )
+vPlotStrAbove                   = plot( vStrAbove, style = plot.style_linebr, linewidth = 1, color = cBullish, title = "STR Above - ST" )
 
 vStrBelow                       = not vStrAboveOrBelow ? vStrLevelBelow : na
-vPlotStrBelow                   = plot( vStrBelow, style = plot.style_linebr, linewidth = 1, color = cBearish, title = "Below" )
+vPlotStrBelow                   = plot( vStrBelow, style = plot.style_linebr, linewidth = 1, color = cBearish, title = "STR Below - ST" )
+
+// Single combined value for validation export
+vPlotStrValue                   = plot( vStrValue, style = plot.style_circles, linewidth = 1, color = color.new(color.white, 100), title = "STR - ST" )
 
 //-------------------------------------
 // FILL

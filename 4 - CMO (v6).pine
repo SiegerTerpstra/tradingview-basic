@@ -6,7 +6,7 @@
 //-------------------------------------
 
 // Release:                     2025-12-29
-// Update:                      2025-12-29
+// Update:                      2026-01-04
 // Author:                      sajjetti
 // Email:                       contact@sajjetti.ai
 // Website:                     sajjetti.ai
@@ -41,7 +41,7 @@
 //-------------------------------------
 // INDICATOR PARAMETERS
 
-vVersion                        = "V2.0"
+vVersion                        = "V2.1"
 vPineVersion                    = "ps6"
 vTitle                          = "Chande Momentum Oscillator"
 vShort                          = "CMO"
@@ -53,10 +53,10 @@ indicator( title = vTitle+" ["+vVersion+"|"+vPineVersion+"]", shorttitle = vShor
 //-------------------------------------
 // INPUTS
 
-var groupCmo                    = "CMO (Standard: close, 9, 1)"
+var groupCmo                    = "CMO (Standard: close, 5, 1)"
 
 vTimeframe                      = input.timeframe( defval = "", title = "Indicator Timeframe" )
-vSource                         = input.source( defval = hl2, title = "Source", group = groupCmo )
+vSource                         = input.source( defval = close, title = "Source", group = groupCmo )
 vLength                         = input.int( defval = 5, minval = 1, maxval = 1024, title = "Length", group = groupCmo )
 vSmooth                         = input.int( defval = 1, minval = 1, maxval = 1024, title = "Smooth", group = groupCmo )
 vOffSet                         = input.int( defval = 0, minval = 0, maxval = 1024, title = "Offset", group = groupCmo )
@@ -143,6 +143,6 @@ vLineMedian                     = hline( 0, color = cZeroLine, linestyle = hline
 vUpperBand                      = hline( vUpperBandValue, color = cUpperBand, linestyle = hline.style_dotted, linewidth = 1, title = "Upper Band" )
 vLowerBand                      = hline( vLowerBandValue, color = cLowerBand, linestyle = hline.style_dotted, linewidth = 1, title = "Lower Band" )
 
-vPlotCmo                        = plot( vCmo, style = plot.style_line, color = fColor( 0, vCmo ), linewidth = 2, title = "CMO" )
+vPlotCmo                        = plot( vCmo, style = plot.style_line, color = fColor( 0, vCmo ), linewidth = 2, title = "CMO - ST" )
 
 //-------------------------------------
